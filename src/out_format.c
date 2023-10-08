@@ -160,8 +160,10 @@ static void draw_element(struct element_group *g, struct element *e, void *arg)
 		else
 			BUG();
 
-		if (p)
+		if (p) {
 			fprintf(c_fd, "%s", p);
+			fflush(c_fd);
+		}
 	}
 }
 
