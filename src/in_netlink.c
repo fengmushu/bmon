@@ -34,6 +34,7 @@
 #ifndef SYS_BSD
 
 static int c_notc = 0;
+static int c_noiw = 0;
 static struct element_group *grp;
 static struct bmon_module netlink_ops;
 
@@ -437,6 +438,9 @@ struct rdata {
 static struct nl_sock *sock;
 static struct nl_cache *link_cache, *qdisc_cache, *class_cache;
 
+#include <iwlib.h>
+static int iw_skfd = -1;
+
 static void update_tc_attrs(struct element *e, struct rtnl_tc *tc)
 {
 	int i;
@@ -601,6 +605,67 @@ static void handle_qdisc(struct nl_object *obj, void *arg)
 	find_classes(rtnl_tc_get_handle(tc), &ndata);
 }
 
+static void handle_iw(struct element *e, struct rtnl_link *link)
+{
+	int rc;
+	const char *ifname = rtnl_link_get_name(link);
+	struct wireless_info	info;
+	struct iwreq		wrq;
+
+	memset((char *) &info, 0, sizeof(struct wireless_info));
+
+	rc = iw_get_basic_config(iw_skfd, ifname, &info.b);
+	if (rc < 0) {
+		struct ifreq ifr;
+
+		strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+		if (ioctl(iw_skfd, SIOCGIFFLAGS, &ifr) < 0) {
+			fprintf(stderr, "%s, iw dev notfound\n", ifname);
+		} else {
+			// fprintf(stderr, "%s, iw not supported\n", ifname);
+		}
+	}
+	/* Get ranges */
+	if(iw_get_range_info(iw_skfd, ifname, &(info.range)) >= 0)
+		info.has_range = 1;
+
+	/* Get stats */
+	if(iw_get_stats(iw_skfd, ifname, &(info.stats), &info.range, info.has_range) >= 0) {
+		char rssi[32] = "-110";
+		const iwqual *qual = &info.stats.qual;
+		const iwrange *range = &info.range;
+
+		info.has_stats = 1;
+		if(info.has_range && ((qual->level != 0)
+			|| (qual->updated & (IW_QUAL_DBM | IW_QUAL_RCPI)))) {
+			if(qual->updated & IW_QUAL_RCPI) { /* RCPI */
+				/* RCPI = int{(Power in dBm +110)*2} for 0dbm > Power > -110dBm */
+				if(!(qual->updated & IW_QUAL_LEVEL_INVALID)) {
+					double	rcpilevel = (qual->level / 2.0) - 110.0;
+					snprintf(rssi, sizeof(rssi), "%g", rcpilevel);
+				}
+			} else { /* dBm */
+				if((qual->updated & IW_QUAL_DBM)
+					|| (qual->level > range->max_qual.level)) {
+					if(!(qual->updated & IW_QUAL_LEVEL_INVALID)) {
+						int	dblevel = qual->level;
+						/* Implement a range for dBm [-192; 63] */
+						if(qual->level >= 64)
+							dblevel -= 0x100;
+						snprintf(rssi, sizeof(rssi), "%d", dblevel);
+					}
+				} else { /* relative */
+					if(!(qual->updated & IW_QUAL_LEVEL_INVALID)) {
+						snprintf(rssi, sizeof(rssi), "%d/%d", qual->level, range->max_qual.level);
+					}
+				}
+			}
+		}
+
+		element_update_info(e, "rssi", rssi);
+	}
+}
+
 static void handle_tc(struct element *e, struct rtnl_link *link)
 {
 	struct rtnl_qdisc *qdisc;
@@ -739,6 +804,9 @@ static void do_link(struct nl_object *obj, void *arg)
 	if (!c_notc)
 		handle_tc(e, link);
 
+	if (!c_noiw)
+		handle_iw(e, link);
+
 	element_notify_update(e, NULL);
 	element_lifesign(e, 1);
 }
@@ -770,6 +838,8 @@ static void netlink_shutdown(void)
 	nl_cache_free(link_cache);
 	nl_cache_free(qdisc_cache);
 	nl_socket_free(sock);
+	if (!c_noiw)
+		close(iw_skfd);
 }
 
 static int netlink_do_init(void)
@@ -802,6 +872,15 @@ static int netlink_do_init(void)
 
 	if (!(grp = group_lookup(DEFAULT_GROUP, GROUP_CREATE)))
 		BUG();
+
+	if (c_noiw)
+		return 0;
+
+	if((iw_skfd = iw_sockets_open()) < 0) {
+		fprintf(stderr, "iw sockets open failed\n");
+		c_noiw = 1;
+		return 0;
+	}
 
 	return 0;
 
@@ -848,7 +927,11 @@ static void netlink_parse_opt(const char *type, const char *value)
 {
 	if (!strcasecmp(type, "notc"))
 		c_notc = 1;
-	else if (!strcasecmp(type, "help")) {
+
+	if (!strcasecmp(type, "noiw"))
+		c_noiw = 1;
+
+	if (!strcasecmp(type, "help")) {
 		print_help();
 		exit(0);
 	}

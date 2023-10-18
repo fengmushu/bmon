@@ -55,6 +55,7 @@ AC_CHECK_HEADERS(getopt.h ncurses/ncurses.h ncurses.h curses.h)
 AC_CHECK_HEADERS(dirent.h sys/utsname.h sys/sockio.h netinet6/in6.h)
 AC_CHECK_HEADERS(fcntl.h netdb.h netinet/in.h sysctl/ioctl.h)
 AC_CHECK_HEADERS(sys/param.h sys/socket.h)
+AC_CHECK_HEADERS(iwlib.h)
 
 AC_CHECK_TYPES(suseconds_t)
 
@@ -77,6 +78,7 @@ case ${target_os} in
 esac
 
 AC_CHECK_LIB(m, pow, [], AC_MSG_ERROR([requires libm]))
+AC_CHECK_LIB(iw, iw_sockets_open, [], AC_MSG_ERROR([requires libiw]))
 
 BMON_LIB=""
 
