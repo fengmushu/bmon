@@ -36,6 +36,7 @@ bmon_SOURCES = \
 	bmon.c \
 	module.c \
 	in_netlink.c \
+	in_iw.c \
 	in_null.c \
 	in_dummy.c \
 	in_proc.c \
