@@ -684,6 +684,10 @@ static void update_link_infos(struct element *e, struct rtnl_link *link)
 	}
 }
 
+#ifndef IFF_UP
+#define IFF_UP (1U)
+#endif
+
 static void do_link(struct nl_object *obj, void *arg)
 {
 	struct rtnl_link *link = (struct rtnl_link *) obj;
