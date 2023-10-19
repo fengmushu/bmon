@@ -53,17 +53,17 @@ void handle_iw(struct element *e, struct rtnl_link *link)
 
 	memset((char *) &info, 0, sizeof(struct wireless_info));
 
-	rc = iw_get_basic_config(iw_skfd, ifname, &info.b);
-	if (rc < 0) {
-		struct ifreq ifr;
+	// rc = iw_get_basic_config(iw_skfd, ifname, &info.b);
+	// if (rc < 0) {
+	// 	struct ifreq ifr;
 
-		strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
-		if (ioctl(iw_skfd, SIOCGIFFLAGS, &ifr) < 0) {
-			fprintf(stderr, "%s, iw dev notfound\n", ifname);
-		} else {
-			// fprintf(stderr, "%s, iw not supported\n", ifname);
-		}
-	}
+	// 	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	// 	if (ioctl(iw_skfd, SIOCGIFFLAGS, &ifr) < 0) {
+	//		fprintf(stderr, "%s, iw dev not found\n", ifname);
+	// 	} else {
+	//		fprintf(stderr, "%s, iw not supported\n", ifname);
+	// 	}
+	// }
 	/* Get ranges */
 	if(iw_get_range_info(iw_skfd, ifname, &(info.range)) >= 0)
 		info.has_range = 1;
