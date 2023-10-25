@@ -46,37 +46,19 @@ void iw_close(void)
 
 void handle_iw(struct element *e, struct rtnl_link *link)
 {
-	int rc;
 	const char *ifname = rtnl_link_get_name(link);
 	struct wireless_info	info;
-	struct iwreq		wrq;
 
 	memset((char *) &info, 0, sizeof(struct wireless_info));
 
-	// rc = iw_get_basic_config(iw_skfd, ifname, &info.b);
-	// if (rc < 0) {
-	// 	struct ifreq ifr;
-
-	// 	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	// 	if (ioctl(iw_skfd, SIOCGIFFLAGS, &ifr) < 0) {
-	//		fprintf(stderr, "%s, iw dev not found\n", ifname);
-	// 	} else {
-	//		fprintf(stderr, "%s, iw not supported\n", ifname);
-	// 	}
-	// }
-	/* Get ranges */
-	if(iw_get_range_info(iw_skfd, ifname, &(info.range)) >= 0)
-		info.has_range = 1;
-
 	/* Get stats */
 	if(iw_get_stats(iw_skfd, ifname, &(info.stats), &info.range, info.has_range) >= 0) {
-		char rssi[32] = "-110";
+		char rssi[32] = "-110", linkq[32]="98", noise[32] = "-99";
 		const iwqual *qual = &info.stats.qual;
-		const iwrange *range = &info.range;
 
-		info.has_stats = 1;
-		if(info.has_range && ((qual->level != 0)
-			|| (qual->updated & (IW_QUAL_DBM | IW_QUAL_RCPI)))) {
+		// printf("updated %d, link %d, qual %d, noise %d\n", qual->updated, qual->qual, qual->level, qual->noise);
+		if(qual->level != 0) {
+			snprintf(linkq, sizeof(linkq), "%d", qual->qual);
 			if(qual->updated & IW_QUAL_RCPI) { /* RCPI */
 				/* RCPI = int{(Power in dBm +110)*2} for 0dbm > Power > -110dBm */
 				if(!(qual->updated & IW_QUAL_LEVEL_INVALID)) {
@@ -84,23 +66,29 @@ void handle_iw(struct element *e, struct rtnl_link *link)
 					snprintf(rssi, sizeof(rssi), "%g", rcpilevel);
 				}
 			} else { /* dBm */
-				if((qual->updated & IW_QUAL_DBM)
-					|| (qual->level > range->max_qual.level)) {
+				if(qual->updated & IW_QUAL_LEVEL_UPDATED) {
 					if(!(qual->updated & IW_QUAL_LEVEL_INVALID)) {
 						int	dblevel = qual->level;
+						int 	dbNoise = qual->noise;
 						/* Implement a range for dBm [-192; 63] */
 						if(qual->level >= 64)
 							dblevel -= 0x100;
+						if(qual->noise >= 64)
+							dbNoise -=  0x100;
 						snprintf(rssi, sizeof(rssi), "%d", dblevel);
+						snprintf(noise, sizeof(noise), "%d", dbNoise);
 					}
 				} else { /* relative */
 					if(!(qual->updated & IW_QUAL_LEVEL_INVALID)) {
-						snprintf(rssi, sizeof(rssi), "%d/%d", qual->level, range->max_qual.level);
+						snprintf(rssi, sizeof(rssi), "%d", qual->level);
+						snprintf(noise, sizeof(noise), "%d", qual->noise);
 					}
 				}
 			}
 		}
 
 		element_update_info(e, "rssi", rssi);
+		element_update_info(e, "linkq", linkq);
+		element_update_info(e, "nosie", noise);
 	}
 }
