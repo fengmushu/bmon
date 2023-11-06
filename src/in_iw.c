@@ -49,6 +49,8 @@ void handle_iw(struct element *e, struct rtnl_link *link)
 	const char *ifname = rtnl_link_get_name(link);
 	struct wireless_info	info;
 
+	printf("iw ifname %s\n", ifname);
+
 	memset((char *) &info, 0, sizeof(struct wireless_info));
 
 	/* Get stats */

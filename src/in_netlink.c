@@ -34,7 +34,7 @@
 #ifndef SYS_BSD
 
 static int c_notc = 0;
-static int c_noiw = 0;
+static int c_noiw = 1;
 static struct element_group *grp;
 static struct bmon_module netlink_ops;
 

@@ -10,6 +10,15 @@ interface and a programmable text output for scripting.
 
 ## Changes
 
+## Requirements
+apt-get install libncurses5-dev
+apt-get install libconfuse-dev
+apt-get install libnl-3-dev
+apt-get install libnl-route-3-dev
+apt-get install libiw-dev
+
+apt-get install libdbi-dev
+
 
 ## New in v3.5
  * Fixes for all defects identified by coverity
