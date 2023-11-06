@@ -79,6 +79,7 @@ esac
 
 AC_CHECK_LIB(m, pow, [], AC_MSG_ERROR([requires libm]))
 AC_CHECK_LIB(iw, iw_sockets_open, [], AC_MSG_ERROR([requires libiw]))
+AC_CHECK_LIB(dbi, dbi_driver_open_r, [], AC_MSG_ERROR([requires libdbi]))
 
 BMON_LIB=""
 
